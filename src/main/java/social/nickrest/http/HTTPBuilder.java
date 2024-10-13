@@ -68,27 +68,30 @@ public class HTTPBuilder {
 
                 String requestBody = body.toString();
                 String path = exchange.getRequestURI().getPath();
-                StaticFileServer staticFileServer = staticFiles.keySet().stream()
-                        .filter(staticFile -> path.startsWith(staticFile.staticPath))
-                        .findFirst()
-                        .orElse(null);
+                HTTPMethod requestMethod = HTTPMethod.valueOf(exchange.getRequestMethod());
 
-                if(staticFileServer != null) {
-                    File requestedFile = getFile(staticFileServer, path);
+                if (requestMethod == HTTPMethod.GET) {
+                    StaticFileServer staticFileServer = staticFiles.keySet().stream()
+                            .filter(staticFile -> path.startsWith(staticFile.staticPath))
+                            .findFirst()
+                            .orElse(null);
 
-                    if(requestedFile.exists()) {
-                        staticFiles.get(staticFileServer).handle(exchange);
-                        return;
+                    if(staticFileServer != null) {
+                        File requestedFile = getFile(staticFileServer, path);
+
+                        if(requestedFile.exists()) {
+                            staticFiles.get(staticFileServer).handle(exchange);
+                            return;
+                        }
                     }
                 }
 
-                if(path.endsWith("/") && !path.equals("/")) {
+                if (path.endsWith("/") && !path.equals("/")) {
                     Response response = new Response(HTTPMethod.GET, path, requestBody, exchange);
                     response.redirect(path.substring(0, path.length() - 1));
                     return;
                 }
 
-                HTTPMethod requestMethod = HTTPMethod.valueOf(exchange.getRequestMethod());
                 requests.stream()
                         .filter(request -> {
                             // Convert path pattern to regex
@@ -99,7 +102,7 @@ public class HTTPBuilder {
                             Pattern compiledPattern = Pattern.compile(regex);
                             Matcher matcher = compiledPattern.matcher(exchange.getRequestURI().getPath()); // Use the request URI
 
-                            return matcher.matches(); // Check if the entire string matches
+                            return matcher.matches() && requestMethod.equals(request.method()); // Check if the entire string matches
                         })
                         .findFirst()
                         .ifPresentOrElse((request) -> {
