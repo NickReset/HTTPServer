@@ -10,6 +10,8 @@ import social.nickrest.http.method.HTTPMethod;
 import java.util.Map;
 
 public interface IResponse {
+    IResponse pathParams(Map<String, String> pathParams);
+    Map<String, String> pathParams();
     Map<String, String> query();
     String getBody();
     String getPath();

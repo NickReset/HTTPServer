@@ -20,7 +20,10 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Getter
 public class HTTPBuilder {
@@ -69,16 +72,33 @@ public class HTTPBuilder {
 
                 HTTPMethod requestMethod = HTTPMethod.valueOf(exchange.getRequestMethod());
                 requests.stream()
-                        .filter(iRequest -> iRequest.path().equalsIgnoreCase(path) && iRequest.method().equals(requestMethod))
+                        .filter(request -> {
+                            // Convert path pattern to regex
+                            String regex = request.path().replaceAll("\\{[^}]+}", "([^/]+)");
+                            regex = "^" + regex + "$"; // Anchors to match the entire path
+
+                            // Compile regex and match against the incoming path
+                            Pattern compiledPattern = Pattern.compile(regex);
+                            Matcher matcher = compiledPattern.matcher(exchange.getRequestURI().getPath()); // Use the request URI
+
+                            return matcher.matches(); // Check if the entire string matches
+                        })
                         .findFirst()
                         .ifPresentOrElse((request) -> {
+                            // Extract path parameters
+                            Map<String, String> pathParams = extractPathParams(request.path(), exchange.getRequestURI().getPath());
+
+                            // Handle the request
                             request.exchange(exchange);
-                            request.handle(new Response(requestMethod, path, requestBody, exchange));
-                            }, () -> new Response(requestMethod, path, requestBody, exchange)
+                            request.handle(new Response(requestMethod, path, requestBody, exchange)
+                                    .pathParams(pathParams));
+                        }, () -> {
+                            // Handle not found case
+                            new Response(requestMethod, path, requestBody, exchange)
                                     .status(HttpStatus.NOT_FOUND)
                                     .writeHeader("Content-Type", "text/html")
-                                    .write(String.format("<pre>Cannot %s %s</pre>", requestMethod, path))
-                        );
+                                    .write(String.format("<pre>Cannot %s %s</pre>", requestMethod, path));
+                        });
             }));
 
             duplicateCheck(); // this will prevent the server from starting if there are duplicate requests
@@ -92,6 +112,33 @@ public class HTTPBuilder {
             throw new RuntimeException(e);
         }
     }
+
+    private Map<String, String> extractPathParams(String pattern, String requestPath) {
+        Map<String, String> params = new HashMap<>();
+
+        // Convert pattern to regex
+        String regex = pattern.replaceAll("\\{([^}]+)}", "([^/]+)"); // Convert {param} to ([^/]+)
+        regex = "^" + regex + "$"; // Anchors to match the entire path
+
+        Pattern compiledPattern = Pattern.compile(regex);
+        Matcher matcher = compiledPattern.matcher(requestPath);
+
+        // Check if the path matches
+        if (matcher.matches()) {
+            // Extract parameters
+            Matcher paramMatcher = Pattern.compile("\\{([^}]+)}").matcher(pattern);
+            int i = 1; // Start from 1 for capturing groups
+            while (paramMatcher.find()) {
+                String paramName = paramMatcher.group(1);
+                String paramValue = matcher.group(i++);
+                params.put(paramName, paramValue);
+            }
+            return params; // Return the populated map
+        }
+
+        return null; // Return null if no match found
+    }
+
 
     public HTTPBuilder openStatic(String basePath) {
         return openStatic(basePath, "/");

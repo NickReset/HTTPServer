@@ -9,10 +9,13 @@ import social.nickrest.http.request.IResponse;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @RequiredArgsConstructor
 public class Response implements IResponse {
 
+    private final Map<String, String> pathParams = new HashMap<>();
     private final HTTPMethod httpType;
     private final String path;
     private final String body;
@@ -64,6 +67,11 @@ public class Response implements IResponse {
     }
 
     @Override
+    public Map<String, String> pathParams() {
+        return pathParams;
+    }
+
+    @Override
     public Map<String, String> query() {
         return exchange.getRequestURI().getQuery() == null ? new HashMap<>() : parseQuery(exchange.getRequestURI().getQuery());
     }
@@ -76,6 +84,12 @@ public class Response implements IResponse {
             map.put(entry[0], entry.length > 1 ? allAfter : "");
         }
         return map;
+    }
+
+    @Override
+    public IResponse pathParams(Map<String, String> pathParams) {
+        this.pathParams.putAll(pathParams);
+        return this;
     }
 
     @Override
