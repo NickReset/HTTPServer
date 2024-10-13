@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>TODO List</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="todo"></div>
+
+    <label for="todo"></label><input type="text" id="todo" placeholder="Enter your todo">
+    <button id="add">Add Todo</button>
+    <script>
+        fetch('/todo')
+            .then(response => response.json())
+            .then(data => {
+                const todo = document.querySelector('.todo');
+
+                data.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'todo-item';
+                    li.textContent = item;
+
+                    todo.appendChild(li);
+                });
+            });
+
+        document.getElementById('add').addEventListener('click', () => {
+            const todo = document.getElementById('todo').value;
+
+            fetch('/addTodo?todo=' + todo)
+                .then(response => response.json())
+                .then(data => {
+                    const li = document.createElement('li');
+                    li.className = 'todo-item';
+
+                    if(data.status === "OK") {
+                        li.textContent = todo;
+                    }
+
+                    document.querySelector('.todo').appendChild(li);
+                });
+        });
+
+        document.querySelector('.todo').addEventListener('click', (e) => {
+            if(!e.target.classList.contains('todo-item')) return;
+
+            const todoItemIndex = Array.from(e.target.parentNode.children).indexOf(e.target);
+
+            fetch('/removeTodo?todo=' + todoItemIndex)
+                .then(response => response.json())
+                .then(data => {
+                    e.target.remove();
+                });
+        });
+
+    </script>
+</body>
+</html>
