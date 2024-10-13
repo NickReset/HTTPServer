@@ -1,22 +1,24 @@
 package social.nickrest.http;
 
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpHandlers;
 import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.SimpleFileServer;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import social.nickrest.http.context.ContextBuilder;
 import social.nickrest.http.data.Context;
 import social.nickrest.http.method.HTTPMethod;
 import social.nickrest.http.request.IRequest;
-import social.nickrest.http.request.IResponse;
-import social.nickrest.http.request.type.BasicHTTPRequest;
 import social.nickrest.http.request.type.Response;
 import social.nickrest.util.ClassPathUtil;
-import social.nickrest.util.ResourceFileUtil;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +32,8 @@ public class HTTPBuilder {
     private final List<IRequest> requests = new ArrayList<>();
     private final HashMap<String, String> headersToWrite = new HashMap<>();
 
+    private final List<ServerStartedHandle> queue = new ArrayList<>();
+    private final Map<StaticFileServer, HttpHandler> staticFiles = new HashMap<>();
     private ClientConnectedHandle handle;
 
     public static HTTPBuilder create() {
@@ -44,6 +48,7 @@ public class HTTPBuilder {
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
+            queue.forEach(handle -> handle.handle(server));
             server.createContext("/", (exchange -> {
                 InetAddress address = exchange.getRemoteAddress().getAddress();
 
@@ -63,6 +68,19 @@ public class HTTPBuilder {
 
                 String requestBody = body.toString();
                 String path = exchange.getRequestURI().getPath();
+                StaticFileServer staticFileServer = staticFiles.keySet().stream()
+                        .filter(staticFile -> path.startsWith(staticFile.staticPath))
+                        .findFirst()
+                        .orElse(null);
+
+                if(staticFileServer != null) {
+                    File requestedFile = getFile(staticFileServer, path);
+
+                    if(requestedFile.exists()) {
+                        staticFiles.get(staticFileServer).handle(exchange);
+                        return;
+                    }
+                }
 
                 if(path.endsWith("/") && !path.equals("/")) {
                     Response response = new Response(HTTPMethod.GET, path, requestBody, exchange);
@@ -104,6 +122,7 @@ public class HTTPBuilder {
             duplicateCheck(); // this will prevent the server from starting if there are duplicate requests
 
             server.setExecutor(null);
+
             server.start();
             if(startedHandle != null) {
                 startedHandle.handle(server);
@@ -111,6 +130,23 @@ public class HTTPBuilder {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static File getFile(StaticFileServer staticFileServer, String path) {
+        File file = staticFileServer.listeningFolder;
+        String filePath = path.substring(staticFileServer.staticPath.length());
+        String lastPath = filePath.substring(filePath.lastIndexOf("/") + 1);
+        String fileExtension = lastPath.contains(".") ? lastPath.substring(lastPath.lastIndexOf(".") + 1) : null;
+
+        if(filePath.endsWith("/")) {
+            filePath = filePath.substring(0, filePath.length() - 1);
+        }
+
+        if(fileExtension == null) {
+            filePath += "/index.html";
+        }
+
+        return new File(file, filePath);
     }
 
     private Map<String, String> extractPathParams(String pattern, String requestPath) {
@@ -139,115 +175,14 @@ public class HTTPBuilder {
         return null; // Return null if no match found
     }
 
-
-    public HTTPBuilder openStatic(String basePath) {
-        return openStatic(basePath, "/");
-    }
-
     public HTTPBuilder openStatic(File basePath) {
         return openStatic(basePath, "/");
     }
 
-
-    public HTTPBuilder openStatic(String basePath, String staticPath) {
-        List<String> files = ResourceFileUtil.getResourceFiles(basePath, true);
-
-        if (!staticPath.equals("/")) {
-            staticPath = staticPath.replaceAll("^/|/$", "");
-        }
-
-        for(String file : files) {
-            String httpPath = (staticPath.equals("/") ? "" : staticPath) + ContextBuilder.formatPath("/", staticPath.replaceFirst(basePath, ""), file.replaceFirst(basePath, ""));
-            String fileExtension = file.substring(file.lastIndexOf(".") + 1);
-
-            if(!staticPath.equals("/")) {
-                httpPath = "/" + httpPath;
-            }
-
-            request(new BasicHTTPRequest(httpPath, HTTPMethod.GET) {
-                @Override
-                public void handle(@NonNull IResponse res) {
-                    res.writeHeader("Content-Type", "text/" + fileExtension)
-                            .write(ResourceFileUtil.getResourceAsString(file));
-                }
-            });
-
-            if(httpPath.endsWith("static/index.html")) {
-                String path = httpPath.replace("static/index.html", "");
-                if(path.endsWith("/") && !path.equalsIgnoreCase("/")) {
-                    path = path.substring(0, path.length() - 1);
-                }
-
-                request(new BasicHTTPRequest(path, HTTPMethod.GET) {
-                    @Override
-                    public void handle(@NonNull IResponse res) {
-                        res.writeHeader("Content-Type", "text/" + fileExtension)
-                                .write(ResourceFileUtil.getResourceAsString(file));
-                    }
-                });
-            }
-        }
-        return this;
-    }
-
     public HTTPBuilder openStatic(File file, String staticPath) {
-        if(!file.isDirectory()) {
-            throw new RuntimeException("File is not a directory");
-        }
-
-        File[] files = file.listFiles();
-
-        if(files == null) {
-            throw new RuntimeException("File is not a directory");
-        }
-
-        for(File f : files) {
-            if(f.isDirectory()) {
-                openStatic(f, ContextBuilder.formatPath("/", staticPath, f.getName()));
-                continue;
-            }
-
-            String httpPath = ContextBuilder.formatPath("/", staticPath, f.getName());
-            String fileExtension = f.getName().substring(f.getName().lastIndexOf(".") + 1);
-            String fileName = f.getName();
-
-            if(fileName.equalsIgnoreCase("index.html")) {
-                String path = httpPath.replace("index.html", "");
-
-                if(path.endsWith("/") && !path.equalsIgnoreCase("/")) path = path.substring(0, path.length() - 1);
-                openFile(path, f, fileExtension);
-            }
-
-            openFile(httpPath, f, fileExtension);
-        }
-
+        staticFiles.put(new StaticFileServer(staticPath, file), SimpleFileServer.createFileHandler(Path.of(file.getAbsolutePath())));
         return this;
     }
-
-    private void openFile(String path, File f, String fileExtension) {
-        request(new BasicHTTPRequest(path, HTTPMethod.GET) {
-            @Override
-            public void handle(@NonNull IResponse res) {
-                try {
-                    FileReader reader = new FileReader(f);
-                    BufferedReader bufferedReader = new BufferedReader(reader);
-                    StringBuilder content = new StringBuilder();
-                    String line;
-                    while((line = bufferedReader.readLine()) != null) {
-                        content.append(line);
-                    }
-
-                    res.writeHeader("Content-Type", "text/" + fileExtension)
-                            .write(content.toString());
-
-                    reader.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        });
-    }
-
 
     public HTTPBuilder writeHeader(String key, String value) {
         headersToWrite.put(key, value);
@@ -305,6 +240,12 @@ public class HTTPBuilder {
                 }
             }
         }
+    }
+
+    @RequiredArgsConstructor
+    public static class StaticFileServer {
+        private final String staticPath;
+        private final File listeningFolder;
     }
 
 }

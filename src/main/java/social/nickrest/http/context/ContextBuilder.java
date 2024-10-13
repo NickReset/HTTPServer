@@ -25,7 +25,7 @@ public class ContextBuilder {
             if(method.isAnnotationPresent(Mapping.class)) {
                 Mapping mapping = method.getAnnotation(Mapping.class);
 
-                String path = formatPath(basePath, clazz.getAnnotation(Context.class).value(), mapping.path().toLowerCase());
+                String path = formatPath(basePath, clazz.getAnnotation(Context.class).value(), mapping.path());
                 IRequest request = new AdvancedHTTPRequest(path, mapping.method().getMethod()) {
                     @Override
                     public void handle(@NonNull IResponse res) {

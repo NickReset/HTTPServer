@@ -10,11 +10,12 @@ import social.nickrest.http.request.IResponse;
 public class TestContext {
 
     @Mapping(
-            path = "/hello/{name}",
+            path = "/hello/@{name}",
             method = MethodEnum.GET,
             contentType = "application/json"
     )
     public String test(@NonNull IResponse response) {
-        return "Hello, " + response.pathParams().get("name") + " " + response.pathParams().size();
+        return "Hello, " + response.pathParams().get("name") + " (" + response.pathParams().size() + ")";
     }
+
 }
