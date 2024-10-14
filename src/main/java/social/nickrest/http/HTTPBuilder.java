@@ -88,7 +88,7 @@ public class HTTPBuilder {
                 }
 
                 if (path.endsWith("/") && !path.equals("/")) {
-                    Request response = new Request(HTTPMethod.GET, path, requestBody, exchange);
+                    Request response = new Request(requestMethod, path, requestBody, exchange);
                     response.redirect(path.substring(0, path.length() - 1));
                     return;
                 }
@@ -103,7 +103,7 @@ public class HTTPBuilder {
                             Pattern compiledPattern = Pattern.compile(regex);
                             Matcher matcher = compiledPattern.matcher(exchange.getRequestURI().getPath()); // Use the request URI
 
-                            return matcher.matches() && requestMethod.equals(request.method()); // Check if the entire string matches
+                            return (matcher.matches() || request.path().equals(path)) && requestMethod.equals(request.method()); // Check if the entire string matches
                         })
                         .findFirst()
                         .ifPresentOrElse((request) -> {
@@ -206,7 +206,7 @@ public class HTTPBuilder {
             classes.stream()
                     .filter(clazz -> clazz.isAnnotationPresent(Context.class))
                     .forEach(clazz -> {
-                        if(IRequest.class.isAssignableFrom(clazz)) {
+                        if(IResponse.class.isAssignableFrom(clazz)) {
                             try {
                                 builder.set(request((IResponse) clazz.getConstructor().newInstance()));
                             } catch (Exception e) {
@@ -214,8 +214,6 @@ public class HTTPBuilder {
                             }
                             return;
                         }
-
-                        System.out.println(clazz + "");
 
                         try {
                             ContextBuilder.build(path, clazz.getConstructor().newInstance()).forEach(this::request);

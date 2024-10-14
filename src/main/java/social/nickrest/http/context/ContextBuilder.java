@@ -28,7 +28,7 @@ public class ContextBuilder {
                 String path = formatPath(basePath, clazz.getAnnotation(Context.class).value(), mapping.path());
                 IResponse request = new AdvancedHTTPResponse(path, mapping.method().getMethod()) {
                     @Override
-                    public void handle(@NonNull IRequest res) {
+                    public void handle(@NonNull IRequest req) {
                         int argsLength = method.getParameterCount();
                         Object[] args = new Object[argsLength];
 
@@ -39,9 +39,9 @@ public class ContextBuilder {
                         for(int i = 0; i < argsLength; i++) {
                             Class<?> parameterType = method.getParameterTypes()[i];
                             if(parameterType == IResponse.class) {
-                                args[i] = res;
-                            } else if(parameterType == IRequest.class) {
                                 args[i] = this;
+                            } else if(parameterType == IRequest.class) {
+                                args[i] = req;
                             } else {
                                 throw new IllegalArgumentException("Method parameters must be of type IRequest or IResponse");
                             }
@@ -50,10 +50,10 @@ public class ContextBuilder {
                         if(method.getReturnType() != void.class) {
                             try {
                                 Object result = method.invoke(object, args);
-                                res.writeHeader("Content-Type", mapping.contentType())
+                                req.writeHeader("Content-Type", mapping.contentType())
                                         .write(result.toString());
                             } catch (Exception e) {
-                                throw new RuntimeException(e);
+                                e.printStackTrace();
                             }
                             return;
                         }
@@ -61,7 +61,7 @@ public class ContextBuilder {
                         try {
                             method.invoke(object, args);
                         } catch (Exception e) {
-                            throw new RuntimeException(e);
+                            e.printStackTrace();
                         }
                     }
                 };

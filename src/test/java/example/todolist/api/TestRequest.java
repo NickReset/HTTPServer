@@ -19,7 +19,7 @@ public class TestRequest {
     private final List<String> todo = new ArrayList<>();
 
     @Mapping(path = "/todo", contentType = "application/json", method = MethodEnum.GET)
-    public JsonArray todo(IRequest response) {
+    public JsonArray todo() {
         JsonArray jsonArray = new JsonArray();
         todo.forEach(jsonArray::add);
 
@@ -27,13 +27,13 @@ public class TestRequest {
     }
 
     @Mapping(path = "/addTodo", contentType = "application/json", method = MethodEnum.GET)
-    public JsonObject setTodo(IRequest response) {
+    public JsonObject setTodo(IRequest request) {
         JsonObject returnObject = new JsonObject();
 
-        String toDo = response.query().get("todo");
+        String toDo = request.query().get("todo");
 
-        if(toDo == null) {
-            response.status(HttpStatus.BAD_REQUEST);
+        if (toDo == null) {
+            request.status(HttpStatus.BAD_REQUEST);
 
             returnObject.addProperty("error", "todo is required");
             return returnObject;
@@ -41,30 +41,30 @@ public class TestRequest {
 
         todo.add(toDo);
 
-        response.status(HttpStatus.OK);
+        request.status(HttpStatus.OK);
         returnObject.addProperty("status", HttpStatus.OK.getReasonPhrase());
         return returnObject;
     }
 
     @Mapping(path = "/removeTodo", contentType = "application/json", method = MethodEnum.GET)
-    public JsonArray removeTodo(IRequest response) {
+    public JsonArray removeTodo(IRequest request) {
         JsonArray returnObject = new JsonArray();
 
-        if(response.query().get("todo") != null && NumberUtil.isInteger(response.query().get("todo"))) {
-            int toDo = Integer.parseInt(response.query().get("todo"));
+        if(request.query().get("todo") != null && NumberUtil.isInteger(request.query().get("todo"))) {
+            int toDo = Integer.parseInt(request.query().get("todo"));
 
             if(toDo < 0 || toDo >= todo.size()) {
-                response.status(HttpStatus.BAD_REQUEST);
+                request.status(HttpStatus.BAD_REQUEST);
                 return returnObject;
             }
 
             todo.remove(toDo);
-            response.status(HttpStatus.OK);
+            request.status(HttpStatus.OK);
             returnObject.forEach(returnObject::add);
             return returnObject;
         }
 
-        response.status(HttpStatus.BAD_REQUEST);
+        request.status(HttpStatus.BAD_REQUEST);
         return returnObject;
     }
 
