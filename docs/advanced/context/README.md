@@ -49,14 +49,14 @@ public class RequestHandler {
     }
 
     ```
-* ##  Step 2.3 you can have multiple methods
+* ## Step 2.3 you can have multiple methods
     #### okay so personally I think this is the best feature of this library you can have multiple methods in the same class and put `IRequest` and `IResponse` in any order you want and it will still work
     #### *or* you dont to have `IRequest` or `IResponse` at all or you can have one but not the other the library will fix it for you
     
     * ## you can have it like this
     ```java
         @Mapping(path = "/hi", method = MethodEnum.GET, contentType = "text/html")
-        public String hiWorld(@NonNull IResponse request) {
+        public String hiWorld(@NonNull IRequest request) {
             return "<h1>Hi World</h1>";
         }
     ```
@@ -64,7 +64,7 @@ public class RequestHandler {
     * ## this
     ```java
         @Mapping(path = "/hi", method = MethodEnum.GET, contentType = "text/html")
-        public String hiWorld(@NonNull IRequest request) {
+        public String hiWorld(@NonNull IResponse request) {
             return "<h1>Hi World</h1>";
         }
     ```

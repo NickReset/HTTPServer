@@ -7,8 +7,8 @@ This is a simple example of how to create a basic server using the 'HTTPBuilder`
 import lombok.NonNull;
 import social.nickrest.http.HTTPBuilder;
 import social.nickrest.http.method.HTTPMethod;
-import social.nickrest.http.request.IResponse;
-import social.nickrest.http.request.type.BasicHTTPRequest;
+import social.nickrest.http.request.IRequest;
+import social.nickrest.http.request.type.BasicHTTPResponse;
 
 public class Main {
     public static void main(String[] args) {
@@ -18,7 +18,7 @@ public class Main {
         // create a GET request to the root path that says "Hello World"
         builder.request(new BasicHTTPRequest("/", HTTPMethod.GET) {
             @Override
-            public void handle(@NonNull IResponse res) {
+            public void handle(@NonNull IRequest res) {
                 res.writeHeader("Content-Type", "text/html"); // writing the content type (defualt being text/plain)
                 res.write("<h1>Hello World</h1>"); // writing the content
             }
@@ -34,7 +34,7 @@ public class Main {
     HTTPBuilder.create() // first create the server
         .request(new BasicHTTPRequest("/", HTTPMethod.GET) { // create a GET request to the root path that says "Hello World"
             @Override
-            public void handle(@NonNull IResponse res) {
+            public void handle(@NonNull IRequest res) {
                 res.writeHeader("Content-Type", "text/html") // writing the content type (default being text/plain)
                     .write("<h1>Hello World</h1>"); // writing the content
             }

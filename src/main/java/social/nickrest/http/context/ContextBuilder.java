@@ -5,7 +5,7 @@ import social.nickrest.http.data.Context;
 import social.nickrest.http.data.Mapping;
 import social.nickrest.http.request.IRequest;
 import social.nickrest.http.request.IResponse;
-import social.nickrest.http.request.type.AdvancedHTTPRequest;
+import social.nickrest.http.request.type.AdvancedHTTPResponse;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -13,9 +13,9 @@ import java.util.List;
 
 public class ContextBuilder {
 
-    public static List<IRequest> build(String basePath, Object object) {
+    public static List<IResponse> build(String basePath, Object object) {
         Class<?> clazz = object.getClass();
-        List<IRequest> requests = new ArrayList<>();
+        List<IResponse> requests = new ArrayList<>();
 
         if(!clazz.isAnnotationPresent(Context.class)) {
             throw new IllegalArgumentException(String.format("Class \"%s\" must be annotated with @%s", clazz.getName(), Context.class.getName()));
@@ -26,9 +26,9 @@ public class ContextBuilder {
                 Mapping mapping = method.getAnnotation(Mapping.class);
 
                 String path = formatPath(basePath, clazz.getAnnotation(Context.class).value(), mapping.path());
-                IRequest request = new AdvancedHTTPRequest(path, mapping.method().getMethod()) {
+                IResponse request = new AdvancedHTTPResponse(path, mapping.method().getMethod()) {
                     @Override
-                    public void handle(@NonNull IResponse res) {
+                    public void handle(@NonNull IRequest res) {
                         int argsLength = method.getParameterCount();
                         Object[] args = new Object[argsLength];
 

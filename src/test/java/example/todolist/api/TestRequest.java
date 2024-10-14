@@ -6,6 +6,7 @@ import social.nickrest.http.HttpStatus;
 import social.nickrest.http.data.Context;
 import social.nickrest.http.data.Mapping;
 import social.nickrest.http.method.MethodEnum;
+import social.nickrest.http.request.IRequest;
 import social.nickrest.http.request.IResponse;
 import social.nickrest.util.NumberUtil;
 
@@ -18,7 +19,7 @@ public class TestRequest {
     private final List<String> todo = new ArrayList<>();
 
     @Mapping(path = "/todo", contentType = "application/json", method = MethodEnum.GET)
-    public JsonArray todo(IResponse response) {
+    public JsonArray todo(IRequest response) {
         JsonArray jsonArray = new JsonArray();
         todo.forEach(jsonArray::add);
 
@@ -26,7 +27,7 @@ public class TestRequest {
     }
 
     @Mapping(path = "/addTodo", contentType = "application/json", method = MethodEnum.GET)
-    public JsonObject setTodo(IResponse response) {
+    public JsonObject setTodo(IRequest response) {
         JsonObject returnObject = new JsonObject();
 
         String toDo = response.query().get("todo");
@@ -46,7 +47,7 @@ public class TestRequest {
     }
 
     @Mapping(path = "/removeTodo", contentType = "application/json", method = MethodEnum.GET)
-    public JsonArray removeTodo(IResponse response) {
+    public JsonArray removeTodo(IRequest response) {
         JsonArray returnObject = new JsonArray();
 
         if(response.query().get("todo") != null && NumberUtil.isInteger(response.query().get("todo"))) {

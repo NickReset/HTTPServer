@@ -5,9 +5,10 @@ import com.sun.net.httpserver.HttpExchange;
 import lombok.RequiredArgsConstructor;
 import social.nickrest.http.method.HTTPMethod;
 import social.nickrest.http.request.IRequest;
+import social.nickrest.http.request.IResponse;
 
 @RequiredArgsConstructor
-public abstract class BasicHTTPRequest implements IRequest {
+public abstract class BasicHTTPResponse implements IResponse {
 
     private HttpExchange exchange;
 
@@ -36,7 +37,7 @@ public abstract class BasicHTTPRequest implements IRequest {
 
     @Override
     public Headers getHeaders() {
-        return exchange.getRequestHeaders();
+        return exchange.getResponseHeaders();
     }
 
 }

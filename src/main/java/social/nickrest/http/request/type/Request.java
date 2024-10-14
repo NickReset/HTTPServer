@@ -5,15 +5,13 @@ import com.sun.net.httpserver.HttpExchange;
 import lombok.RequiredArgsConstructor;
 import social.nickrest.http.HttpStatus;
 import social.nickrest.http.method.HTTPMethod;
-import social.nickrest.http.request.IResponse;
+import social.nickrest.http.request.IRequest;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @RequiredArgsConstructor
-public class Response implements IResponse {
+public class Request implements IRequest {
 
     private final Map<String, String> pathParams = new HashMap<>();
     private final HTTPMethod httpType;
@@ -40,18 +38,18 @@ public class Response implements IResponse {
     }
 
     @Override
-    public IResponse writeHeader(String key, String value) {
+    public IRequest writeHeader(String key, String value) {
         exchange.getResponseHeaders().set(key, value);
         return this;
     }
 
     @Override
     public Headers getHeaders() {
-        return exchange.getResponseHeaders();
+        return exchange.getRequestHeaders();
     }
 
     @Override
-    public IResponse status(int status) {
+    public IRequest status(int status) {
         this.status = status;
         return this;
     }
@@ -87,7 +85,7 @@ public class Response implements IResponse {
     }
 
     @Override
-    public IResponse pathParams(Map<String, String> pathParams) {
+    public IRequest pathParams(Map<String, String> pathParams) {
         this.pathParams.putAll(pathParams);
         return this;
     }

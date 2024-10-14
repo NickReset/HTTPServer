@@ -11,7 +11,8 @@ import social.nickrest.http.context.ContextBuilder;
 import social.nickrest.http.data.Context;
 import social.nickrest.http.method.HTTPMethod;
 import social.nickrest.http.request.IRequest;
-import social.nickrest.http.request.type.Response;
+import social.nickrest.http.request.IResponse;
+import social.nickrest.http.request.type.Request;
 import social.nickrest.util.ClassPathUtil;
 
 import java.io.*;
@@ -29,7 +30,7 @@ import java.util.regex.Pattern;
 
 @Getter
 public class HTTPBuilder {
-    private final List<IRequest> requests = new ArrayList<>();
+    private final List<IResponse> requests = new ArrayList<>();
     private final HashMap<String, String> headersToWrite = new HashMap<>();
 
     private final List<ServerStartedHandle> queue = new ArrayList<>();
@@ -87,7 +88,7 @@ public class HTTPBuilder {
                 }
 
                 if (path.endsWith("/") && !path.equals("/")) {
-                    Response response = new Response(HTTPMethod.GET, path, requestBody, exchange);
+                    Request response = new Request(HTTPMethod.GET, path, requestBody, exchange);
                     response.redirect(path.substring(0, path.length() - 1));
                     return;
                 }
@@ -111,11 +112,11 @@ public class HTTPBuilder {
 
                             // Handle the request
                             request.exchange(exchange);
-                            request.handle(new Response(requestMethod, path, requestBody, exchange)
+                            request.handle(new Request(requestMethod, path, requestBody, exchange)
                                     .pathParams(pathParams));
                         }, () -> {
                             // Handle not found case
-                            new Response(requestMethod, path, requestBody, exchange)
+                            new Request(requestMethod, path, requestBody, exchange)
                                     .status(HttpStatus.NOT_FOUND)
                                     .writeHeader("Content-Type", "text/html")
                                     .write(String.format("<pre>Cannot %s %s</pre>", requestMethod, path));
@@ -125,7 +126,6 @@ public class HTTPBuilder {
             duplicateCheck(); // this will prevent the server from starting if there are duplicate requests
 
             server.setExecutor(null);
-
             server.start();
             if(startedHandle != null) {
                 startedHandle.handle(server);
@@ -192,7 +192,7 @@ public class HTTPBuilder {
         return this;
     }
 
-    public HTTPBuilder request(IRequest request) {
+    public HTTPBuilder request(IResponse request) {
         requests.add(request);
         return this;
     }
@@ -208,7 +208,7 @@ public class HTTPBuilder {
                     .forEach(clazz -> {
                         if(IRequest.class.isAssignableFrom(clazz)) {
                             try {
-                                builder.set(request((IRequest) clazz.getConstructor().newInstance()));
+                                builder.set(request((IResponse) clazz.getConstructor().newInstance()));
                             } catch (Exception e) {
                                 throw new RuntimeException(e);
                             }
